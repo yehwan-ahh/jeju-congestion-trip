@@ -11,9 +11,11 @@ import plotly.express as px
 import streamlit as st
 
 from src.model import FEATURES, build_features, evaluate, load_data, predict, train_final
+from src.theme import apply_theme, hero
 from src.spots import CONGESTION_COLORS, CONGESTION_LEVELS, OPEN_HOURS, WEATHERS, spots_df
 
 st.set_page_config(page_title="제주 한적로드", page_icon="🍊", layout="wide")
+apply_theme()
 
 LEVEL_ORDER = {lv: i for i, lv in enumerate(CONGESTION_LEVELS)}
 WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"]
@@ -60,8 +62,10 @@ date = st.sidebar.date_input("여행 날짜", value=dt.date.today() + dt.timedel
                              min_value=dt.date(2025, 1, 1), max_value=dt.date(2026, 12, 31))
 hour = st.sidebar.select_slider("방문 시간", options=OPEN_HOURS, value=13, format_func=lambda h: f"{h:02d}:00")
 weather = st.sidebar.radio("예상 날씨", WEATHERS, horizontal=True)
-areas = st.sidebar.multiselect("지역", sorted(spots["area"].unique()), placeholder="전체 지역")
-cats = st.sidebar.multiselect("관광지 유형", sorted(spots["category"].unique()), placeholder="전체 유형")
+area_sel = st.sidebar.selectbox("지역", ["전체 지역"] + sorted(spots["area"].unique()))
+cat_sel = st.sidebar.selectbox("관광지 유형", ["전체 유형"] + sorted(spots["category"].unique()))
+areas = [] if area_sel == "전체 지역" else [area_sel]
+cats = [] if cat_sel == "전체 유형" else [cat_sel]
 target_spot = st.sidebar.selectbox("가고 싶은 관광지", spots["spot"], index=0)
 st.sidebar.divider()
 st.sidebar.warning("데모 버전: 모든 수치는 **샘플(합성) 데이터** 기반이며 실제 혼잡도가 아닙니다.", icon="⚠️")
@@ -74,8 +78,9 @@ if areas:
 if cats:
     view = view[view["category"].isin(cats)]
 
-st.title("🍊 제주 한적로드")
-st.markdown(f"**{date:%Y년 %m월 %d일} ({WEEKDAYS[date.weekday()]}) {hour:02d}:00 · {weather}** 기준 예측 결과입니다.")
+WEATHER_ICON = {"맑음": "☀️", "흐림": "☁️", "비": "🌧️"}
+hero("제주 한적로드", "붐비는 곳은 피하고, 한적한 제주를 만나는 AI 혼잡도 예측 여행 가이드",
+     f"📅 {date:%Y년 %m월 %d일} ({WEEKDAYS[date.weekday()]}) · 🕐 {hour:02d}:00 · {WEATHER_ICON[weather]} {weather}")
 
 tab1, tab2, tab3, tab4 = st.tabs(["🔮 혼잡도 예측·추천", "📊 데이터 탐색(EDA)", "🤖 모델 성능", "ℹ️ 데이터 안내"])
 
@@ -102,7 +107,8 @@ with tab1:
                      labels={"hour": "시간", "ratio": "혼잡률(수용력 대비)", "congestion": "혼잡도"},
                      title=f"{target_spot} 시간대별 예상 혼잡률")
         fig.add_vline(x=hour, line_dash="dash", line_color="gray")
-        fig.update_layout(height=320, yaxis_tickformat=".0%", xaxis_dtick=1, margin=dict(t=50, b=10))
+        fig.update_layout(height=340, yaxis_tickformat=".0%", xaxis_dtick=1, margin=dict(t=80, b=10),
+                          legend=dict(orientation="h", y=1.12, x=0, title_text=""))
         st.plotly_chart(fig, width="stretch")
     with right:
         st.markdown("#### 💡 추천")
@@ -133,8 +139,9 @@ with tab1:
     else:
         cols = st.columns(len(rec))
         for col, r in zip(cols, rec.itertuples()):
-            col.markdown(f"**{r.spot}**  \n{r.area} · {r.category}  \n"
-                         f"{level_badge(r.congestion)}  \n혼잡률 {r.ratio * 100:.0f}% · {r.dist_km}km",
+            col.markdown(f"<div class='rec-card'><div class='name'>{r.spot}</div>"
+                         f"<div class='meta'>{r.area} · {r.category}</div>{level_badge(r.congestion)}"
+                         f"<div class='meta' style='margin-top:8px'>혼잡률 {r.ratio * 100:.0f}% · {r.dist_km}km</div></div>",
                          unsafe_allow_html=True)
 
     # 지도
@@ -149,7 +156,8 @@ with tab1:
                                                             "lat": False, "lon": False, "size": False},
                              labels={"congestion": "혼잡도", "pred_visitors": "예상 방문객", "area": "지역"},
                              zoom=9, center={"lat": 33.38, "lon": 126.55}, height=480)
-    fmap.update_layout(map_style="open-street-map", margin=dict(l=0, r=0, t=0, b=0))
+    fmap.update_layout(map_style="open-street-map", margin=dict(l=0, r=0, t=0, b=0),
+                       legend=dict(orientation="h", y=1.0, x=0, bgcolor="rgba(255,255,255,.85)"))
     st.plotly_chart(fmap, width="stretch")
 
     st.subheader("📋 전체 관광지 혼잡도 순위 (한적한 순)")
@@ -185,7 +193,7 @@ with tab2:
     with a:
         hm = df.groupby(["category", "hour"], as_index=False)["congestion_ratio"].mean()
         f = px.density_heatmap(hm, x="hour", y="category", z="congestion_ratio", histfunc="avg",
-                               color_continuous_scale="YlOrRd", title="Q3. 유형 × 시간대별 평균 혼잡률",
+                               title="Q3. 유형 × 시간대별 평균 혼잡률",
                                labels={"hour": "시간", "category": "유형", "congestion_ratio": "혼잡률"})
         st.plotly_chart(f, width="stretch")
     with b:
