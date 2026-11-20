@@ -76,6 +76,7 @@ jeju-congestion-trip/
 │   ├── spots.py                   # 관광지 목록·좌표·수용력, 공휴일, 혼잡도 기준
 │   ├── generate_data.py           # 샘플(합성) 데이터 생성
 │   ├── model.py                   # 학습·평가·예측
+│   └── theme.py                   # 제주 테마 디자인(CSS·차트 색상)
 ├── data/jeju_congestion_sample.csv.gz
 ├── docs/                          # 스크린샷
 ├── .streamlit/                    # 테마, secrets 예시
