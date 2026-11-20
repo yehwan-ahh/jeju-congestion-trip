@@ -11,6 +11,8 @@
 
 ![메인 화면](docs/screenshot_main.png)
 
+📄 프로젝트 설명서(PDF): [docs/project_description.pdf](docs/project_description.pdf)
+
 ## 프로젝트 흐름
 
 `주제 선정 → 데이터 수집 → 데이터 분석(EDA) → 혼잡도 예측 → Streamlit 대시보드`
